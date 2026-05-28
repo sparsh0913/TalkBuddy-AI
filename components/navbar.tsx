@@ -60,7 +60,7 @@ export function Navbar() {
 
           <span className="text-lg md:text-xl font-semibold tracking-tight">
             Talk
-            <span className="text-primary">Gyan</span> AI
+            <span className="text-primary">Buddy</span> AI
           </span>
         </Link>
 
