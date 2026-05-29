@@ -7,8 +7,10 @@ import { cn } from "@/lib/utils";
 import { ConnectionState } from "@/types";
 import { Button } from "@/components/ui/button";
 import { MicSelector } from "@/components/ui/mic-selector";
+import { useAudioStore } from "@/store/useAudioStore";
 
 function ControlsPanel() {
+  const {connect} = useAudioStore();
   const [selectedDevice, setSelectedDevice] = useState<string>("");
   
   const isConnected = false;
@@ -68,9 +70,7 @@ function ControlsPanel() {
           {/* 2. CONNECT / DISCONNECT BUTTON */}
           {!isConnected && !isConnecting ? (
             <Button
-              onClick={()=>{
-
-              }}
+              onClick={connect}
               size="lg"
               className={cn(
                 "rounded-xl sm:rounded-full",
