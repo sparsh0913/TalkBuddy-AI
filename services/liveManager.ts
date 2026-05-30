@@ -1,9 +1,14 @@
-import { MODEL } from '@/lib/constants';
+import { INPUT_SAMPLE_RATE, MODEL, OUTPUT_SAMPLE_RATE } from '@/lib/constants';
 import { GoogleGenAI, Modality, Session } from '@google/genai';
 
 export class LiveManager {
 private ai: GoogleGenAI;
 private activeSession: Session | null = null;
+private inputAudioContext: AudioContext | null = null;
+private outputAudioContext: AudioContext | null = null;
+private outputNode : GainNode | null = null;
+private mediaStream : MediaStream | null=null;
+private workletNode : AudioWorkletNode | null=null;
 
 constructor(){
 this.ai = new GoogleGenAI({
@@ -14,7 +19,8 @@ this.ai = new GoogleGenAI({
     const config = { 
       responseModalities: [Modality.AUDIO],
       systemInstruction : "You are a helpful and friendly AI Assisant" };
-this.activeSession = await this.ai.live.connect({
+      //creating session on connect button
+    this.activeSession = await this.ai.live.connect({
     model: MODEL,
     callbacks: {
       onopen: function () {
@@ -32,6 +38,50 @@ this.activeSession = await this.ai.live.connect({
     },
     config: config,
   });
+
+ //Audio Processing using Audio Context 
+  this.inputAudioContext = new AudioContext({
+    sampleRate:INPUT_SAMPLE_RATE
+  });
+
+  this.outputAudioContext = new AudioContext({
+    sampleRate:OUTPUT_SAMPLE_RATE
+  })
+
+  if(this.inputAudioContext.state === 'suspended'){
+    this.inputAudioContext.resume();
+  }
+
+   if(this.outputAudioContext.state === 'suspended'){
+    this.outputAudioContext.resume();
+  }
+
+  //creating Node
+  this.outputNode = this.outputAudioContext.createGain(); //controlling volume
+  this.outputNode.connect(this.outputAudioContext.destination);
+
+  //using worklet to create node in new thread
+  await this.inputAudioContext.audioWorklet.addModule("/worklet/mic-processor.js");
+
+  this.workletNode = new AudioWorkletNode(
+    this.inputAudioContext,
+    "mic-processor"
+  );
+
+  this.workletNode.connect(this.inputAudioContext.destination);
+
+  //getting media streams 
+  this.mediaStream = await navigator.mediaDevices.getUserMedia({
+    audio:{
+      sampleRate:INPUT_SAMPLE_RATE,
+      channelCount:1,
+      echoCancellation:true,
+      noiseSuppression:true,
+      autoGainControl:true
+    }
+  })
+
+
   console.log("session", this.activeSession);
     }
 }

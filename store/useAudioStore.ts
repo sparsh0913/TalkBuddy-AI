@@ -26,7 +26,7 @@ export const useAudioStore = create<AudioStore>()(
 
         //check permission
         try{
-   await navigator.mediaDevices.getUserMedia({
+         await navigator.mediaDevices.getUserMedia({
             audio: true
         })
         } catch{
