@@ -117,6 +117,10 @@ this.inputSource.connect(this.workletNode);
        if(!this.outputAudioContext || !this.outputNode) return;
      const audioBuffer = await decodeAudioData(uintData, this.outputAudioContext, OUTPUT_SAMPLE_RATE ,1); //creating audio buffer 
 
+  if(this.nextStartTime < this.outputAudioContext.currentTime){
+    this.nextStartTime = this.outputAudioContext.currentTime;
+  }
+
      const source = this.outputAudioContext.createBufferSource();
      source.buffer = audioBuffer;  //connecting audio buffer to buffer source
      source.connect(this.outputNode); //connecting buffer source to output node
