@@ -1,6 +1,7 @@
-import { createPCMBlob } from '@/lib/audioUtils';
+import { base64ToUint8Array, createPCMBlob, decodeAudioData } from '@/lib/audioUtils';
 import { INPUT_SAMPLE_RATE, MODEL, OUTPUT_SAMPLE_RATE } from '@/lib/constants';
-import { GoogleGenAI, Modality, Session } from '@google/genai';
+import { GoogleGenAI, LiveServerMessage, Modality, Session } from '@google/genai';
+import { uint } from 'three/tsl';
 
 export class LiveManager {
 private ai: GoogleGenAI;
@@ -11,6 +12,8 @@ private outputNode : GainNode | null = null;
 private mediaStream : MediaStream | null=null;
 private workletNode : AudioWorkletNode | null=null;
 private inputSource: MediaStreamAudioSourceNode | null=null;
+private nextStartTime = 0;
+private sources = new Set<AudioBufferSourceNode>();
 
 constructor(){
 this.ai = new GoogleGenAI({
@@ -21,6 +24,7 @@ this.ai = new GoogleGenAI({
     const config = { 
       responseModalities: [Modality.AUDIO],
       systemInstruction : "You are a helpful and friendly AI Assisant" };
+
       //creating session on connect button
     this.activeSession = await this.ai.live.connect({
     model: MODEL,
@@ -28,9 +32,7 @@ this.ai = new GoogleGenAI({
       onopen: function () {
         console.debug('Opened');
       },
-      onmessage: function (message) {
-        console.debug(message);
-      },
+      onmessage: this.handleMessage.bind(this),
       onerror: function (e) {
         console.debug('Error:', e.message);
       },
@@ -72,7 +74,10 @@ this.ai = new GoogleGenAI({
 
   this.workletNode.port.onmessage = (event)=>{
     const pcmBlob = createPCMBlob(event.data as Float32Array);
-    console.log(pcmBlob);
+  
+    this.activeSession?.sendRealtimeInput({
+      audio: pcmBlob,
+    })
   }
 
   //getting media streams 
@@ -93,5 +98,34 @@ this.inputSource.connect(this.workletNode);
 
 
   console.log("session", this.activeSession);
+    }
+
+   async handleMessage(message : LiveServerMessage){
+     
+      const serverContent = message.serverContent;
+      const base64Data = serverContent?.modelTurn?.parts?.[0].inlineData?.data;
+      if(!base64Data) return;
+     await this.playAudioChunk(base64Data as string);
+      console.log("output context", this.outputAudioContext);
+    }
+
+
+     //playing the audio from AI
+    async playAudioChunk(audioData:string){           
+    const uintData = base64ToUint8Array(audioData); //converting data from base64 
+
+       if(!this.outputAudioContext || !this.outputNode) return;
+     const audioBuffer = await decodeAudioData(uintData, this.outputAudioContext, OUTPUT_SAMPLE_RATE ,1); //creating audio buffer 
+
+     const source = this.outputAudioContext.createBufferSource();
+     source.buffer = audioBuffer;  //connecting audio buffer to buffer source
+     source.connect(this.outputNode); //connecting buffer source to output node
+     source.start(this.nextStartTime); //starting the source
+     this.nextStartTime += audioBuffer.duration;
+
+     source.addEventListener('ended', ()=>{ //if source ended then deleting it from sources
+      this.sources.delete(source);
+     })
+     this.sources.add(source);
     }
 }
