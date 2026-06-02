@@ -1,3 +1,4 @@
+import { createPCMBlob } from '@/lib/audioUtils';
 import { INPUT_SAMPLE_RATE, MODEL, OUTPUT_SAMPLE_RATE } from '@/lib/constants';
 import { GoogleGenAI, Modality, Session } from '@google/genai';
 
@@ -70,7 +71,8 @@ this.ai = new GoogleGenAI({
   );
 
   this.workletNode.port.onmessage = (event)=>{
-    console.log("MESSAGE RECEIVED FROM AUDIO THREAD" , event.data);
+    const pcmBlob = createPCMBlob(event.data as Float32Array);
+    console.log(pcmBlob);
   }
 
   //getting media streams 
