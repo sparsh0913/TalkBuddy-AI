@@ -1,7 +1,7 @@
 // random-noise-processor.js
 class MicProcessor extends AudioWorkletProcessor {
   process(inputs) {
-    console.log("inputs", inputs);
+    this.port.postMessage(inputs);
     return true;
   }
 }

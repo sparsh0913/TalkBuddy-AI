@@ -9,6 +9,7 @@ private outputAudioContext: AudioContext | null = null;
 private outputNode : GainNode | null = null;
 private mediaStream : MediaStream | null=null;
 private workletNode : AudioWorkletNode | null=null;
+private inputSource: MediaStreamAudioSourceNode | null=null;
 
 constructor(){
 this.ai = new GoogleGenAI({
@@ -68,7 +69,9 @@ this.ai = new GoogleGenAI({
     "mic-processor"
   );
 
-  this.workletNode.connect(this.inputAudioContext.destination);
+  this.workletNode.port.onmessage = (event)=>{
+    console.log("MESSAGE RECEIVED FROM AUDIO THREAD" , event);
+  }
 
   //getting media streams 
   this.mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -79,7 +82,12 @@ this.ai = new GoogleGenAI({
       noiseSuppression:true,
       autoGainControl:true
     }
-  })
+  });
+
+  //creating media stream source
+ this.inputSource = this.inputAudioContext.createMediaStreamSource(this.mediaStream);
+
+this.inputSource.connect(this.workletNode);
 
 
   console.log("session", this.activeSession);
