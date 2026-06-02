@@ -103,6 +103,10 @@ this.inputSource.connect(this.workletNode);
    async handleMessage(message : LiveServerMessage){
      
       const serverContent = message.serverContent;
+
+      if(serverContent?.interrupted){
+        this.stopAllAudio();
+      }
       const base64Data = serverContent?.modelTurn?.parts?.[0].inlineData?.data;
       if(!base64Data) return;
      await this.playAudioChunk(base64Data as string);
@@ -131,5 +135,18 @@ this.inputSource.connect(this.workletNode);
       this.sources.delete(source);
      })
      this.sources.add(source);
+    }
+
+    //adding interruption feature
+    async stopAllAudio(){
+  this.sources.forEach((source)=>{
+   try{
+     source.stop();
+   } catch{}
+  })
+  this.sources.clear();
+  if(this.outputAudioContext){
+  this.nextStartTime = this.outputAudioContext?.currentTime;
+  }
     }
 }
