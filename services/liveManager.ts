@@ -70,7 +70,7 @@ this.ai = new GoogleGenAI({
   );
 
   this.workletNode.port.onmessage = (event)=>{
-    console.log("MESSAGE RECEIVED FROM AUDIO THREAD" , event);
+    console.log("MESSAGE RECEIVED FROM AUDIO THREAD" , event.data);
   }
 
   //getting media streams 
