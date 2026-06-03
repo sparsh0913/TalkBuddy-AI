@@ -1,5 +1,6 @@
 import { base64ToUint8Array, createPCMBlob, decodeAudioData } from '@/lib/audioUtils';
 import { INPUT_SAMPLE_RATE, MODEL, OUTPUT_SAMPLE_RATE } from '@/lib/constants';
+import { ConnectionState, LiveManagerCallbacks } from '@/types';
 import { GoogleGenAI, LiveServerMessage, Modality, Session } from '@google/genai';
 import { uint } from 'three/tsl';
 
@@ -14,13 +15,21 @@ private workletNode : AudioWorkletNode | null=null;
 private inputSource: MediaStreamAudioSourceNode | null=null;
 private nextStartTime = 0;
 private sources = new Set<AudioBufferSourceNode>();
+private callbacks: LiveManagerCallbacks | null=null;
 
-constructor(){
+constructor(callbacks:LiveManagerCallbacks){
 this.ai = new GoogleGenAI({
   apiKey:process.env.NEXT_PUBLIC_GEMINI_API_KEY,
 });
+this.callbacks = callbacks;
 }
    async startSession(){
+    
+   try{
+      //connecting
+    this.callbacks?.onStateChange(
+      ConnectionState.CONNECTING
+    )
     const config = { 
       responseModalities: [Modality.AUDIO],
       systemInstruction : "You are a helpful and friendly AI Assisant" };
@@ -29,12 +38,13 @@ this.ai = new GoogleGenAI({
     this.activeSession = await this.ai.live.connect({
     model: MODEL,
     callbacks: {
-      onopen: function () {
-        console.debug('Opened');
+      onopen: ()=> {
+        this.callbacks?.onStateChange(ConnectionState.CONNECTED);
       },
       onmessage: this.handleMessage.bind(this),
-      onerror: function (e) {
-        console.debug('Error:', e.message);
+      onerror:(e)=> {
+        this.callbacks?.onStateChange(ConnectionState.ERROR);
+        this.callbacks?.onError("Could not connect")
       },
       onclose: function (e) {
         console.debug('Close:', e.reason);
@@ -80,7 +90,7 @@ this.ai = new GoogleGenAI({
     })
   }
 
-  //getting media streams 
+  //getting media streams from microphone step1
   this.mediaStream = await navigator.mediaDevices.getUserMedia({
     audio:{
       sampleRate:INPUT_SAMPLE_RATE,
@@ -91,13 +101,15 @@ this.ai = new GoogleGenAI({
     }
   });
 
-  //creating media stream source
+  //creating media stream source -> Source Node
  this.inputSource = this.inputAudioContext.createMediaStreamSource(this.mediaStream);
-
 this.inputSource.connect(this.workletNode);
-
-
-  console.log("session", this.activeSession);
+console.log("session", this.activeSession);
+   }catch(e){
+    console.error(e);
+      this.callbacks?.onStateChange(ConnectionState.ERROR);
+        this.callbacks?.onError("Something went wrong")
+   }
     }
 
    async handleMessage(message : LiveServerMessage){
