@@ -17,6 +17,8 @@ private nextStartTime = 0;
 private sources = new Set<AudioBufferSourceNode>();
 private callbacks: LiveManagerCallbacks | null=null;
 private isMuted:boolean;
+private inputTranscription = "";
+private outputTranscription = "";
 
 constructor(callbacks:LiveManagerCallbacks){
 this.ai = new GoogleGenAI({
@@ -33,9 +35,9 @@ this.callbacks = callbacks;
     )
     const config = { 
       responseModalities: [Modality.AUDIO],
-      systemInstruction : "You are a helpful and friendly AI Assisant" 
-    
-    
+      systemInstruction : "You are a helpful and friendly AI Assisant",
+      inputAudioTranscription: {},
+      outputAudioTranscription: {}
     };
 
       //creating session on connect button
@@ -123,10 +125,47 @@ console.log("session", this.activeSession);
       if(serverContent?.interrupted){
         this.stopAllAudio();
       }
-      const base64Data = serverContent?.modelTurn?.parts?.[0].inlineData?.data;
-
-      //transcription
       
+      //transcription
+      if(serverContent?.inputTranscription?.text){
+        this.inputTranscription +=  serverContent?.inputTranscription?.text;
+        this.callbacks?.onTranscript(
+          "user",
+          this.inputTranscription,
+          true,
+        )
+      }
+
+      if(serverContent?.outputTranscription?.text){
+        this.outputTranscription += serverContent?.outputTranscription?.text;
+        this.callbacks?.onTranscript(
+          "model",
+          this.outputTranscription,
+          true
+        )
+      }
+
+      if(serverContent?.turnComplete){
+        if(this.inputTranscription){
+           this.callbacks?.onTranscript(
+          "user",
+          this.inputTranscription,
+          false,
+        )
+        this.inputTranscription = "";
+      }
+
+      if(this.outputTranscription){
+         this.callbacks?.onTranscript(
+          "model",
+          this.outputTranscription,
+          false
+        )
+        this.outputTranscription = "";
+      }
+    }
+
+      const base64Data = serverContent?.modelTurn?.parts?.[0].inlineData?.data;
       if(!base64Data) return;
      await this.playAudioChunk(base64Data as string);
       
