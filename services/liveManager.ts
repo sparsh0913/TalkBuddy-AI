@@ -16,6 +16,7 @@ private inputSource: MediaStreamAudioSourceNode | null=null;
 private nextStartTime = 0;
 private sources = new Set<AudioBufferSourceNode>();
 private callbacks: LiveManagerCallbacks | null=null;
+private isMuted:boolean;
 
 constructor(callbacks:LiveManagerCallbacks){
 this.ai = new GoogleGenAI({
@@ -32,7 +33,10 @@ this.callbacks = callbacks;
     )
     const config = { 
       responseModalities: [Modality.AUDIO],
-      systemInstruction : "You are a helpful and friendly AI Assisant" };
+      systemInstruction : "You are a helpful and friendly AI Assisant" 
+    
+    
+    };
 
       //creating session on connect button
     this.activeSession = await this.ai.live.connect({
@@ -120,11 +124,13 @@ console.log("session", this.activeSession);
         this.stopAllAudio();
       }
       const base64Data = serverContent?.modelTurn?.parts?.[0].inlineData?.data;
+
+      //transcription
+      
       if(!base64Data) return;
      await this.playAudioChunk(base64Data as string);
-      console.log("output context", this.outputAudioContext);
+      
     }
-
 
      //playing the audio from AI
     async playAudioChunk(audioData:string){           
@@ -160,5 +166,14 @@ console.log("session", this.activeSession);
   if(this.outputAudioContext){
   this.nextStartTime = this.outputAudioContext?.currentTime;
   }
+    }
+
+    setMute(isMuted:boolean){
+    this.isMuted = isMuted;
+    if(this.mediaStream){
+      this.mediaStream.getAudioTracks().forEach((track)=>{
+        track.enabled = !isMuted;
+      })
+    }
     }
 }
