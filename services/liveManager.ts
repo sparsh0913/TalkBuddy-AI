@@ -215,4 +215,20 @@ console.log("session", this.activeSession);
       })
     }
     }
+
+    disconnect(){
+      this.stopAllAudio();
+
+      if(this.activeSession){
+        this.activeSession.close();
+        this.activeSession = null;
+
+        this.inputSource?.disconnect();
+        this.workletNode?.disconnect();
+        this.inputAudioContext?.close();
+        this.outputAudioContext?.close();
+        this.outputNode?.disconnect();
+        this.callbacks?.onStateChange(ConnectionState.DISCONNECTED)
+      }
+    }
 }

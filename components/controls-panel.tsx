@@ -8,7 +8,7 @@ import { MicSelector } from "@/components/ui/mic-selector";
 import { useAudioStore } from "@/store/useAudioStore";
 
 function ControlsPanel() {
-  const {connect, connectionState, toggleMute, isMuted} = useAudioStore();
+  const {connect, disconnect, connectionState, toggleMute, isMuted} = useAudioStore();
   const [selectedDevice, setSelectedDevice] = useState<string>("");
   
   const isConnected = connectionState === ConnectionState.CONNECTED;
@@ -80,9 +80,7 @@ function ControlsPanel() {
             </Button>
           ) : (
             <Button
-              onClick={()=>{
-                
-              }}
+              onClick={disconnect}
               disabled={isConnecting}
               variant="destructive"
               size="lg"
