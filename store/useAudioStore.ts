@@ -1,3 +1,4 @@
+import { AVAILABLE_LANGUAGES, AVAILABLE_PROFICIENCY_LEVELS, AVAILABLE_TOPICS, AVAILABLE_VOICES } from "@/lib/constants";
 import { LiveManager } from "@/services/liveManager";
 import { ConnectionState, TranscriptItem } from "@/types";
 import { create } from "zustand";
@@ -11,6 +12,16 @@ type AudioStore = {
     transcript:TranscriptItem[];
     connect: () => Promise<void>;
     disconnect: () => Promise<void>;
+    selectedLanguage:string;
+    selectedProficiencyLevel:string;
+    selectedTopic:string;
+    selectedAssistantVoice:string;
+
+    setSelectedLanguage: (lang:string) =>void;
+    setSelectedProficiencyLevel: (prof:string) =>void;
+    setSelectedTopic: (topic:string) =>void;
+    setSelectedAssistantVoice: (voice:string) =>void;
+
     toggleMute: ()=>void;
 };
 
@@ -21,11 +32,29 @@ export const useAudioStore = create<AudioStore>()(
         error:null,
         isMuted:false,
         transcript: [],
+        selectedLanguage: AVAILABLE_LANGUAGES[0].code,
+        selectedProficiencyLevel:AVAILABLE_PROFICIENCY_LEVELS[0].label,
+       selectedTopic: AVAILABLE_TOPICS[0],
+       selectedAssistantVoice:AVAILABLE_VOICES[0].name,
+
         toggleMute: ()=>{
             const state = get();
             set({isMuted: !state.isMuted});
             state.liveManagerInstance?.setMute(!state.isMuted);
         },
+        setSelectedLanguage: (lang:string) =>{
+            set({selectedLanguage:lang})
+        },
+    setSelectedProficiencyLevel: (prof:string) =>{
+        set({selectedProficiencyLevel:prof})
+    },
+    setSelectedTopic: (topic:string) =>{
+        set({selectedTopic:topic})
+    },
+    setSelectedAssistantVoice: (voice:string) => {
+        set({selectedAssistantVoice:voice})
+    },
+
        connect: async ()=>{
         const state = get();
         
@@ -91,7 +120,15 @@ export const useAudioStore = create<AudioStore>()(
         }
     
         //connect session
-        manager.startSession();
+        manager.startSession({
+            selected_assistant_voice:state.selectedAssistantVoice,
+            selected_launguage_code: AVAILABLE_LANGUAGES.find((l)=> l.code === state.selectedLanguage)?.code || 'en-US',
+            selected_launguage_name: AVAILABLE_LANGUAGES.find((l)=> l.code === state.selectedLanguage)?.name || 'English',
+            selected_launguage_region: AVAILABLE_LANGUAGES.find((l)=> l.code === state.selectedLanguage)?.region || 'US',
+            description:state.selectedTopic,
+            selected_topic:state.selectedTopic,
+            selected_proefficent_level:state.selectedProficiencyLevel
+        });
        },
 
        disconnect:async ()=>{
