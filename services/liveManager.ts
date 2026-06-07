@@ -20,9 +20,10 @@ private isMuted:boolean = false;
 private inputTranscription = "";
 private outputTranscription = "";
 
-constructor(callbacks:LiveManagerCallbacks){
+constructor(callbacks:LiveManagerCallbacks,token:string){
 this.ai = new GoogleGenAI({
-  apiKey:process.env.NEXT_PUBLIC_GEMINI_API_KEY,
+  apiKey:token,
+  apiVersion:"v1alpha",
 });
 this.callbacks = callbacks;
 }

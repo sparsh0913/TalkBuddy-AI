@@ -56,8 +56,16 @@ export const useAudioStore = create<AudioStore>()(
     },
 
        connect: async ()=>{
-        const state = get();
-        
+       const state = get();
+        //get ephermeral tokens
+        const response = await fetch('/api/token');
+        if(!response.ok){
+       set({error:"failed to generate token"});
+        }
+
+        const {token} = await response.json();
+      
+    
         if(state.connectionState === ConnectionState.CONNECTING || state.connectionState === ConnectionState.CONNECTED ){
             return;
         }
@@ -115,7 +123,9 @@ export const useAudioStore = create<AudioStore>()(
                 }
                    })
                 },
-            });
+                onAudioLevel: ()=> {}
+            },
+            token.name);
             set({liveManagerInstance:manager})
         }
     
